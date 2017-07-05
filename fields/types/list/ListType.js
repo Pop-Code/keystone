@@ -2,7 +2,7 @@ var async = require('async');
 var FieldType = require('../Type');
 var util = require('util');
 var utils = require('keystone-utils');
-
+var _ = require('lodash');
 var isReserved = require('../../../lib/list/isReserved');
 
 /**
@@ -194,8 +194,15 @@ list.prototype.updateItem = function (item, data, files, callback) {
 		values = [];
 	}
 	// Wrap non-array values in an array
+	// update by pop-code see 
+	// https://github.com/keystonejs/keystone/pull/3282#issuecomment-265873707
 	if (!Array.isArray(values)) {
-		values = [values];
+		if (typeof values === 'object') {
+			values.length = _.size(values);
+			values = Array.prototype.slice.call(values);
+		} else {
+			values = [values];
+		}
 	}
 	// NOTE - this method will overwrite the entire array, which is less specific
 	// than it could be. Concurrent saves could lead to race conditions, but we

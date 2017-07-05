@@ -1,141 +1,165 @@
 /* eslint-disable react/jsx-no-bind */
 
 import assign from 'object-assign';
-import { css, StyleSheet } from 'aphrodite/no-important';
+import {css, StyleSheet} from 'aphrodite/no-important';
 import React from 'react';
 import Field from '../Field';
 import Domify from 'react-domify';
 
-import { Fields } from 'FieldTypes';
-import { Button, GlyphButton } from '../../../admin/client/App/elemental';
+import {Fields} from 'FieldTypes';
+import {Button, GlyphButton} from '../../../admin/client/App/elemental';
 import InvalidFieldType from '../../../admin/client/App/shared/InvalidFieldType';
 
 let i = 0;
-function generateId () {
-	return i++;
+function generateId() {
+    return i++;
 };
 
-const ItemDom = ({ name, id, onRemove, children }) => (
-	<div style={{
-		borderTop: '2px solid #eee',
-		paddingTop: 15,
-	}}>
-		{name && <input type="hidden" name={name} value={id}/>}
-		{children}
-		<div style={{ textAlign: 'right', paddingBottom: 10 }}>
-			<Button size="xsmall" color="danger" onClick={onRemove}>
-				Remove
-			</Button>
-		</div>
-	</div>
+const ItemDom = ({index, name, id, onRemove, onMoveUp, onMoveDown, children}) => (
+    <div style={{
+        borderTop: '2px solid #eee',
+        paddingTop: 15,
+    }}>
+        {name && <input type="hidden" name={name} value={id}/>}
+        {children}
+        <div style={{textAlign: 'right', paddingBottom: 10}}>
+            <Button size="xsmall" color="danger" onClick={onRemove}>
+                Remove
+            </Button>
+            {onMoveUp && <Button style={{marginLeft: 5}} size="xsmall" color="default" onClick={onMoveUp}>
+                Up
+            </Button>}
+            {onMoveDown && <Button style={{marginLeft: 5}} size="xsmall" color="default" onClick={onMoveDown}>
+                Down
+            </Button>}
+        </div>
+    </div>
 );
 
 module.exports = Field.create({
-	displayName: 'ListField',
-	statics: {
-		type: 'List',
-	},
-	propTypes: {
-		fields: React.PropTypes.object.isRequired,
-		label: React.PropTypes.string,
-		onChange: React.PropTypes.func.isRequired,
-		path: React.PropTypes.string.isRequired,
-		value: React.PropTypes.array,
-	},
-	addItem () {
-		const { path, value, onChange } = this.props;
-		onChange({
-			path,
-			value: [
-				...value,
-				{
-					id: generateId(),
-					_isNew: true,
-				},
-			],
-		});
-	},
-	removeItem (index) {
-		const { value: oldValue, path, onChange } = this.props;
-		const value = oldValue.slice(0, index).concat(oldValue.slice(index + 1));
-		onChange({ path, value });
-	},
-	handleFieldChange (index, event) {
-		const { value: oldValue, path, onChange } = this.props;
-		const head = oldValue.slice(0, index);
-		const item = {
-			...oldValue[index],
-			[event.path]: event.value,
-		};
-		const tail = oldValue.slice(index + 1);
-		const value = [...head, item, ...tail];
-		onChange({ path, value });
-	},
-	renderFieldsForItem (index, value) {
-		return Object.keys(this.props.fields).map((path) => {
-			const field = this.props.fields[path];
-			if (typeof Fields[field.type] !== 'function') {
-				return React.createElement(InvalidFieldType, { type: field.type, path: field.path, key: field.path });
-			}
-			const props = assign({}, field);
-			props.value = value[field.path];
-			props.values = value;
-			props.onChange = this.handleFieldChange.bind(this, index);
-			props.mode = 'edit';
-			props.inputNamePrefix = `${this.props.path}[${index}]`;
-			props.key = field.path;
-			// TODO ?
-			// if (props.dependsOn) {
-			// 	props.currentDependencies = {};
-			// 	Object.keys(props.dependsOn).forEach(dep => {
-			// 		props.currentDependencies[dep] = this.state.values[dep];
-			// 	});
-			// }
-			return React.createElement(Fields[field.type], props);
-		}, this);
-	},
-	renderItems () {
-		const { value = [], path } = this.props;
-		const onAdd = this.addItem;
-		return (
-			<div>
-				{value.map((value, index) => {
-					const { id, _isNew } = value;
-					const name = !_isNew && `${path}[${index}][id]`;
-					const onRemove = e => this.removeItem(index);
+    displayName: 'ListField',
+    statics: {
+        type: 'List',
+    },
+    propTypes: {
+        fields: React.PropTypes.object.isRequired,
+        label: React.PropTypes.string,
+        onChange: React.PropTypes.func.isRequired,
+        path: React.PropTypes.string.isRequired,
+        value: React.PropTypes.array,
+    },
+    addItem () {
+        const {path, value, onChange} = this.props;
+        onChange({
+            path,
+            value: [
+                ...value,
+                {
+                    id: generateId(),
+                    _isNew: true,
+                },
+            ],
+        });
+    },
+    removeItem (index) {
+        const {value: oldValue, path, onChange} = this.props;
+        const value = oldValue.slice(0, index).concat(oldValue.slice(index + 1));
+        onChange({path, value});
+    },
+    handleFieldChange (index, event) {
+        const {value: oldValue, path, onChange} = this.props;
+        const head = oldValue.slice(0, index);
+        const item = {
+            ...oldValue[index],
+            [event.path]: event.value,
+        };
+        const tail = oldValue.slice(index + 1);
+        const value = [...head, item, ...tail];
+        //try to order value
+        onChange({path, value});
+    },
+    handleMoveItem(index, newIndex){
+        const {value: oldValue, path, onChange} = this.props;
+        if (newIndex > -1 && newIndex < oldValue.length) {
+            const removedElement = oldValue.splice(index, 1)[0];
+            oldValue.splice(newIndex, 0, removedElement);
+        }
+        const value = oldValue;
+        onChange({path, value});
+    },
+    renderFieldsForItem (index, value) {
+        return Object.keys(this.props.fields).map((path) => {
+            const field = this.props.fields[path];
+            if (typeof Fields[field.type] !== 'function') {
+                return React.createElement(InvalidFieldType, {type: field.type, path: field.path, key: field.path});
+            }
+            const props = assign({}, field);
+            props.value = value[field.path];
+            props.values = value;
+            props.onChange = this.handleFieldChange.bind(this, index);
+            props.mode = 'edit';
+            props.inputNamePrefix = `${this.props.path}[${index}]`;
+            props.key = field.path;
+            // TODO ?
+            // if (props.dependsOn) {
+            // 	props.currentDependencies = {};
+            // 	Object.keys(props.dependsOn).forEach(dep => {
+            // 		props.currentDependencies[dep] = this.state.values[dep];
+            // 	});
+            // }
 
-					return (
-						<ItemDom key={id} {...{ id, name, onRemove }}>
-							{this.renderFieldsForItem(index, value)}
-						</ItemDom>
-					);
-				})}
-				<GlyphButton color="success" glyph="plus" position="left" onClick={onAdd}>
-					Add
-				</GlyphButton>
-			</div>
-		);
-	},
-	renderUI () {
-		const { label, value } = this.props;
-		return (
-			<div className={css(classes.container)}>
-				<h3 data-things="whatever">{label}</h3>
-				{this.shouldRenderField() ? (
-					this.renderItems()
-				) : (
-					<Domify value={value} />
-				)}
-				{this.renderNote()}
-			</div>
-		);
-	},
+
+            return React.createElement(Fields[field.type], props);
+        }, this);
+    },
+    renderItems () {
+        const {value = [], path} = this.props;
+        const onAdd = this.addItem;
+        return (
+            <div>
+                {value.map((value, index) => {
+                    const {id, _isNew} = value;
+                    const name = !_isNew && `${path}[${index}][id]`;
+                    const onRemove = e => this.removeItem(index);
+                    const positionHandlers = {}
+                    if (index > 0) {
+                        positionHandlers.onMoveUp = this.handleMoveItem.bind(this, index, index - 1)
+                    }
+                    if (index < (this.props.value.length - 1)) {
+                        positionHandlers.onMoveDown = this.handleMoveItem.bind(this, index, index + 1)
+                    }
+                    return (
+                        <ItemDom key={id} {...{id, name, onRemove, ...positionHandlers}}>
+                            {this.renderFieldsForItem(index, value)}
+                        </ItemDom>
+                    );
+                })}
+                <GlyphButton color="success" glyph="plus" position="left" onClick={onAdd}>
+                    Add
+                </GlyphButton>
+            </div>
+        );
+    },
+    renderUI () {
+        const {label, value} = this.props;
+        return (
+            <div className={css(classes.container)}>
+                <h3 data-things="whatever">{label}</h3>
+                {this.shouldRenderField() ? (
+                    this.renderItems()
+                ) : (
+                    <Domify value={value}/>
+                )}
+                {this.renderNote()}
+            </div>
+        );
+    },
 });
 
 const classes = StyleSheet.create({
-	container: {
-		marginTop: '2em',
-		paddingLeft: '2em',
-		boxShadow: '-3px 0 0 rgba(0, 0, 0, 0.1)',
-	},
+    container: {
+        marginTop: '2em',
+        paddingLeft: '2em',
+        boxShadow: '-3px 0 0 rgba(0, 0, 0, 0.1)',
+    },
 });

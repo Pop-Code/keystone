@@ -11,13 +11,14 @@ var definePrototypeGetters = require('../../utils/definePrototypeGetters');
  * @api public
  */
 function relationship (list, path, options) {
+	this.sort = (options.sort) ? options.sort : '_id'
 	this.many = (options.many) ? true : false;
 	this.filters = options.filters;
 	this.createInline = (options.createInline) ? true : false;
 	this._defaultSize = 'full';
 	this._nativeType = keystone.mongoose.Schema.Types.ObjectId;
 	this._underscoreMethods = ['format', 'getExpandedData'];
-	this._properties = ['isValid', 'many', 'filters', 'createInline'];
+    this._properties = ['isValid', 'many', 'filters', 'createInline', 'sort'];
 	relationship.super_.call(this, list, path, options);
 }
 relationship.properName = 'Relationship';
@@ -223,7 +224,10 @@ relationship.prototype.updateItem = function (item, data, callback) {
 
 	var value = this.getValueFromData(data);
 	if (value === undefined) {
-		return process.nextTick(callback);
+		value = null
+        if (this.many) {
+            return process.nextTick(callback);
+        }
 	}
 
 	// Are we handling a many relationship or just one value?
