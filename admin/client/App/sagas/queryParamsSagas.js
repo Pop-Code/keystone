@@ -68,8 +68,7 @@ export function * evalQueryParams () {
 	const { cachedQuery } = yield select(state => state.active);
 	const { currentList } = yield select(state => state.lists);
 
-	//TODO FIND A BETTER WAY TO FIX THIS + REPORT TO KEYSTONE ISSUES
-	if (pathname !== `/admin/${currentList.id}`) return;
+	if (pathname !== `${Keystone.adminPath}/${currentList.id}`) return;
 
 	if (isEqual(query, cachedQuery)) {
 		yield put({ type: actions.QUERY_HAS_NOT_CHANGED });
